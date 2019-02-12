@@ -75,6 +75,7 @@ def basic_als_recommender(filename, seed):
     - coldStartStrategy: 'drop'
     Test file: tests/test_basic_als.py
     '''
+    print ("this is a test")
     return 0
 
 def global_average(filename, seed):
