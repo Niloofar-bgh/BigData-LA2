@@ -59,6 +59,7 @@ def toCSVLine(data):
     return None
 
 def basic_als_recommender(filename, seed):
+
     '''
     This function must print the RMSE of recommendations obtained
     through ALS collaborative filtering, similarly to the example at
@@ -75,7 +76,7 @@ def basic_als_recommender(filename, seed):
     - coldStartStrategy: 'drop'
     Test file: tests/test_basic_als.py
     '''
-    sc = SparkContext.getOrCreate(SparkConf().setMaster("local[*]"))
+	sc = SparkContext.getOrCreate(SparkConf().setMaster("local[*]"))
 	spark = SQLContext(sc)
 	lines = spark.read.text(filename).rdd
 	parts = lines.map(lambda row: row.value.split("::"))
@@ -99,7 +100,7 @@ def basic_als_recommender(filename, seed):
 
 	rmse = evaluator.evaluate(predictions)
 
-	#Result
+	#Result rmse
 	return rmse
 
 def global_average(filename, seed):
