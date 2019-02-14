@@ -75,6 +75,7 @@ def basic_als_recommender(filename, seed):
     - coldStartStrategy: 'drop'
     Test file: tests/test_basic_als.py
     '''
+    spark = init_spark()
     lines = spark.read.text(filename).rdd
     parts = lines.map(lambda row: row.value.split("::"))
     ratingsRDD = parts.map(lambda p: Row(userId=int(p[0]), movieId=int(p[1]),
