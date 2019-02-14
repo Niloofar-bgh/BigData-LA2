@@ -107,7 +107,16 @@ def global_average(filename, seed):
     sets should be determined as before (e.g: as in function basic_als_recommender).
     Test file: tests/test_global_average.py
     '''
-    return 0
+    spark = init_spark()
+    lines = spark.read.text(filename).rdd
+    parts = lines.map(lambda row: row.value.split("::"))
+    ratingsRDD = parts.map(lambda p: Row(userId=int(p[0]), movieId=int(p[1]),
+                                     rating=float(p[2]), timestamp=int(p[3])))
+    # timestamp should have been int not float to let this command run!
+    ratings = spark.createDataFrame(ratingsRDD)
+    (training, test) = ratings.randomSplit([0.8, 0.2], seed)
+    average = training.groupBy().avg('rating').collect()[0]['avg(rating)']
+    return average
 
 def global_average_recommender(filename, seed):
     '''
