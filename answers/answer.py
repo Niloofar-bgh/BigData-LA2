@@ -184,6 +184,19 @@ def means_and_interaction(filename, seed, n):
     Note, this function should return a list of collected Rows. Please, have a
     look at the test file to ensure you have the right format.
     '''
+    spark = init_spark()
+    lines = spark.read.text("bigdata-la2-w2019-Niloofar-bgh/data/sample_movielens_ratings.txt").rdd
+    parts = lines.map(lambda row: row.value.split("::"))
+    ratingsRDD = parts.map(lambda p: Row(userId=int(p[0]), movieId=int(p[1]),
+                                     rating=float(p[2]), timestamp=int(p[3])))
+
+    # timestamp should have been int not float to let this command run!
+    ratings = spark.createDataFrame(ratingsRDD)
+
+    (training, test) = ratings.randomSplit([0.8, 0.2], seed)
+
+    # to be continued... 
+    
     return []
 
 def als_with_bias_recommender(filename, seed):
