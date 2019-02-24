@@ -233,7 +233,69 @@ def means_and_interaction(filename, seed, n):
     as before and be initialized with the random seed passed as 
     parameter. Test file: tests/test_als_with_bias_recommender.py
     '''
+    spark = init_spark()
+    lines = spark.read.text(filename).rdd
+    parts = lines.map(lambda row: row.value.split("::"))
+    ratingsRDD = parts.map(lambda p: Row(userId=int(p[0]), movieId=int(p[1]),
+                                     rating=float(p[2]), timestamp=int(p[3])))
+
+    # timestamp should have been int not float to let this command run!
+    ratings = spark.createDataFrame(ratingsRDD)
+
+    (training, test) = ratings.randomSplit([0.8, 0.2], 123)
 
 
+    #################
 
-    return 0
+    #global average 
+    global_mean = training.groupBy().avg("rating").collect()[0]['avg(rating)']
+
+    #User_mean
+    user_mean = training.groupBy("userId").agg({"rating": "avg"})
+    user_mean = user_mean.withColumnRenamed('avg(rating)', 'user_mean')
+
+    #item_mean
+    item_mean = training.groupBy('movieId').agg({"rating": "avg"})
+    item_mean = item_mean.withColumnRenamed('avg(rating)', 'item_mean')
+
+    #joining DFs
+    # mainDF = training.alias('mainDF')
+    userDF = user_mean.alias('userDF')
+    itemDF = item_mean.alias('itemDF')
+
+    training = training.join(userDF, training.userId == userDF.userId, 'outer')\
+        .select(training.userId, training.movieId, training.rating , userDF.user_mean)
+
+    training = training.join(itemDF, training.movieId == itemDF.movieId, 'outer')\
+        .select(training.userId, training.movieId, training.rating ,training.user_mean, itemDF.item_mean)
+
+    #user_item_interaction  
+    training = training.withColumn('user_item_interaction',training.rating\
+                               - (training.user_mean + training.item_mean - global_mean))
+
+
+    #################
+    #####test#######
+
+    test_user_mean = user_mean.alias('test_user_mean')
+    test = test.join(test_user_mean, test.userId == test_user_mean.userId, 'inner') \
+        .select(test.userId, test.movieId, test.rating, test_user_mean.user_mean)
+
+    test_item_mean = item_mean.alias('test_item_mean')
+    test = test.join(test_item_mean, test.movieId == test_item_mean.movieId, 'inner') \
+        .select(test.userId, test.movieId, test.rating, test.user_mean, test_item_mean.item_mean)
+
+    als = ALS(rank = 70 , maxIter=5, regParam=0.01,userCol="userId", itemCol="movieId", ratingCol="user_item_interaction",
+              coldStartStrategy="drop").setSeed(123)
+
+
+    model = als.fit(training)
+    predictions = model.transform(test)
+
+    predictions = predictions.withColumn('prediction_calculated',
+                                     predictions.prediction + predictions.user_mean + predictions.item_mean - global_mean)
+
+    evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction_calculated")
+    rmse = evaluator.evaluate(predictions)
+
+    return rmse
