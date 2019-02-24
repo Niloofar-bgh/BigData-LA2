@@ -242,7 +242,7 @@ def means_and_interaction(filename, seed, n):
     # timestamp should have been int not float to let this command run!
     ratings = spark.createDataFrame(ratingsRDD)
 
-    (training, test) = ratings.randomSplit([0.8, 0.2], 123)
+    (training, test) = ratings.randomSplit([0.8, 0.2], seed)
 
 
     #################
@@ -286,7 +286,7 @@ def means_and_interaction(filename, seed, n):
         .select(test.userId, test.movieId, test.rating, test.user_mean, test_item_mean.item_mean)
 
     als = ALS(rank = 70 , maxIter=5, regParam=0.01,userCol="userId", itemCol="movieId", ratingCol="user_item_interaction",
-              coldStartStrategy="drop").setSeed(123)
+              coldStartStrategy="drop").setSeed(seed)
 
 
     model = als.fit(training)
