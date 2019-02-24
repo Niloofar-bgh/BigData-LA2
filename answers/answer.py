@@ -180,7 +180,9 @@ def means_and_interaction(filename, seed, n):
 
     Training and test sets should be determined as before.
     Test file: tests/test_means_and_interaction.py
-    Note, this function should return a list of collected Rows. Please, have a      look at the test file to ensure you have the right format. '''
+    Note, this function should return a list of collected Rows. Please, have a  
+    look at the test file to ensure you have the right format.
+    '''
 
     spark = init_spark()
     lines = spark.read.text(filename).rdd
