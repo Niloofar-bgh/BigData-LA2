@@ -180,26 +180,48 @@ def means_and_interaction(filename, seed, n):
 
     Training and test sets should be determined as before.
     Test file: tests/test_means_and_interaction.py
+    Note, this function should return a list of collected Rows. Please, have a      look at the test file to ensure you have the right format. '''
 
-    Note, this function should return a list of collected Rows. Please, have a
-    look at the test file to ensure you have the right format.
-    '''
-    #spark = init_spark()
-    #lines = spark.read.text("bigdata-la2-w2019-Niloofar-bgh/data/sample_movielens_ratings.txt").rdd
-    #parts = lines.map(lambda row: row.value.split("::"))
-    #ratingsRDD = parts.map(lambda p: Row(userId=int(p[0]), movieId=int(p[1]),
-    #                                    rating=float(p[2]), timestamp=int(p[3])))
+    spark = init_spark()
+    lines = spark.read.text(filename).rdd
+    parts = lines.map(lambda row: row.value.split("::"))
+    ratingsRDD = parts.map(lambda p: Row(userId=int(p[0]), movieId=int(p[1]),
+                                     rating=float(p[2])))
 
-    # timestamp should have been int not float to let this command run!
-    #ratings = spark.createDataFrame(ratingsRDD)
+    ratings = spark.createDataFrame(ratingsRDD)
+    (training, test) = ratings.randomSplit([0.8, 0.2], seed)
 
-    #(training, test) = ratings.randomSplit([0.8, 0.2], seed)
+    #global average 
+    global_mean = training.groupBy().avg("rating").collect()[0]['avg(rating)']
 
-    # to be continued... 
-    
-    return []
+    #User_mean
+    user_mean = training.groupBy("userId").agg({"rating": "avg"})
+    user_mean = user_mean.withColumnRenamed('avg(rating)', 'user_mean')
 
-def als_with_bias_recommender(filename, seed):
+    #item_mean
+    item_mean = training.groupBy('movieId').agg({"rating": "avg"})
+    item_mean = item_mean.withColumnRenamed('avg(rating)', 'item_mean')
+
+    #joining DFs
+    mainDF = training.alias('mainDF')
+    userDF = user_mean.alias('userDF')
+    itemDF = item_mean.alias('itemDF')
+
+    training = training.join(userDF, training.userId == userDF.userId, 'outer')\
+                .select(training.userId, training.movieId,\
+                training.rating , userDF.user_mean)
+
+    training = training.join(itemDF, training.movieId == itemDF.movieId,'outer')                 \.select(training.userId, training.movieId,\
+                 training.rating ,training.user_mean, itemDF.item_mean)
+
+    #user_item_interaction  
+    training = training.withColumn('user_item_interaction',training.rating\
+                     - (training.user_mean + training.item_mean - global_mean))
+    result = training.orderBy('userId','movieId').collect()
+
+    return result[:n]
+
+    def als_with_bias_recommender(filename, seed):
     '''
     This function must return the RMSE of recommendations obtained 
     using ALS + biases. Your ALS model should make predictions for *i*, 
@@ -211,4 +233,7 @@ def als_with_bias_recommender(filename, seed):
     as before and be initialized with the random seed passed as 
     parameter. Test file: tests/test_als_with_bias_recommender.py
     '''
+
+
+
     return 0
