@@ -207,16 +207,14 @@ def means_and_interaction(filename, seed, n):
     userDF = user_mean.alias('userDF')
     itemDF = item_mean.alias('itemDF')
 
-    training = training.join(userDF, training.userId == userDF.userId, 'outer')\
-                .select(training.userId, training.movieId,\
+    training = training.join(userDF, training.userId == userDF.userId, 'outer').select(training.userId, training.movieId,
                 training.rating , userDF.user_mean)
 
-    training = training.join(itemDF, training.movieId == itemDF.movieId,'outer')                 \.select(training.userId, training.movieId,\
+    training = training.join(itemDF, training.movieId == itemDF.movieId,'outer').select(training.userId, training.movieId,
                  training.rating ,training.user_mean, itemDF.item_mean)
 
     #user_item_interaction  
-    training = training.withColumn('user_item_interaction',training.rating\
-                     - (training.user_mean + training.item_mean - global_mean))
+    training = training.withColumn('user_item_interaction',training.rating- (training.user_mean + training.item_mean - global_mean))
     result = training.orderBy('userId','movieId').collect()
 
     return result[:n]
