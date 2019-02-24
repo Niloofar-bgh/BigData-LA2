@@ -221,7 +221,7 @@ def means_and_interaction(filename, seed, n):
 
     return result[:n]
 
-    def als_with_bias_recommender(filename, seed):
+def als_with_bias_recommender(filename, seed):
     '''
     This function must return the RMSE of recommendations obtained 
     using ALS + biases. Your ALS model should make predictions for *i*, 
